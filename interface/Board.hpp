@@ -18,7 +18,6 @@ enum BoardTypes_t { _TIME_=1, //Fake board to get timestamps
 		    _MAROCROC_=12, //MAROC Readout & Control Board + MAROC Front End Board
 		    _CAENV265_=13, //8ch QDC 
 		    _CAENV785_=14, //32ch PeakSensing ADC
-                    _CAENV1742STANDALONE_=15, //5Gs Digitiser, Desktop form factor
 		    _MAXBOARDTYPE_, // USED By DQM
 		    _UNKWN_=0 };
 

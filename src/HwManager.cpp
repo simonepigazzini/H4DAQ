@@ -632,6 +632,7 @@ BoardTypes_t HwManager::GetBoardTypeId(string type){
 	if (type=="TIME" ) return _TIME_;
 	else if( type=="CAEN_VX718") return _CAENVX718_;
 	else if( type=="CAEN_V1742") return _CAENV1742_;
+        else if( type=="CAEN_V1742Standalone") return _CAENV1742_;
 	else if( type=="CAEN_V513") return _CAENV513_;
 	else if( type=="CAEN_V262") return _CAENV262_;
 	else if( type=="CAEN_V792") return _CAENV792_;
