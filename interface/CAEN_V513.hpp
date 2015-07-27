@@ -42,7 +42,7 @@
 #define CAEN_V513_CHANNEL_DIR_BITMASK 0x1
 //---- CAEN V513 BitMask End
 
-class CAEN_V513: public IOControlBoard 
+class CAEN_V513: public Board, IOControlBoard 
 {
 public:
   typedef enum  {
@@ -104,7 +104,7 @@ public:
     unsigned int ledTriggerVetoBitMask;
   } CAEN_V513_Config_t;
 
-  CAEN_V513(): IOControlBoard(), handle_(-1), dataRegister_(0) { type_="CAEN_V513"; };
+    CAEN_V513(): Board(), IOControlBoard(), handle_(-1), dataRegister_(0) { type_="CAEN_V513"; };
 
   virtual int Init();
   virtual int Clear();

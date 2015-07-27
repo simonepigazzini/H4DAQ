@@ -5,7 +5,7 @@
 #include "interface/Board.hpp"
 #include "interface/BoardConfig.hpp"
 
-class CAEN_VX718: public TriggerBoard 
+class CAEN_VX718: public Board, TriggerBoard 
 {
 public:
   typedef enum  {
@@ -86,7 +86,7 @@ public:
 
   } CAEN_VX718_Config_t;
 
-  CAEN_VX718(): handle_(-1), TriggerBoard() { type_="CAEN_VX718"; outputRegister_=0;};
+    CAEN_VX718(): handle_(-1), Board(), TriggerBoard() { type_="CAEN_VX718"; outputRegister_=0;};
 
   virtual int Init();
   virtual int Clear();

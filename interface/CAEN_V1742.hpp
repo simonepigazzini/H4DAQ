@@ -105,7 +105,7 @@ public:
   int Print () {Print (0) ; } ;
   int Print (int full = 0) ;
 
-private:
+protected:
 
   int getMoreBoardInfo () ;
   int programDigitizer () ;
@@ -120,8 +120,6 @@ private:
   int ParseConfiguration     (BoardConfig * bC) ;
   int ParseConfigForGroups   (BoardConfig * bC, const xmlNode * node) ;
   int ParseConfigForTriggers (BoardConfig * bC, const xmlNode * node) ;
-
-private:
 					
   uint32_t              digitizerHandle_ ;
   CAEN_V1742_Config_t   digitizerConfiguration_ ;

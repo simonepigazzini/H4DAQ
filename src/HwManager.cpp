@@ -3,6 +3,7 @@
 //Boards
 #include "interface/CAEN_VX718.hpp"
 #include "interface/CAEN_V1742.hpp"
+#include "interface/CAEN_V1742Standalone.hpp"
 #include "interface/CAEN_V1495PU.hpp"
 #include "interface/CAEN_V1290.hpp"
 #include "interface/CAEN_V814.hpp"
@@ -117,6 +118,11 @@ void HwManager::Config(Configurator &c){
 			  //constructing a CAEN_V792 board
 			  hw_.push_back( new CAEN_V1742() );
 			}
+		else if( getElementContent(c,"type",board_node) == "CAEN_V1742Standalone")
+			{
+			  //constructing a CAEN_V792 board
+			  hw_.push_back( new CAEN_V1742Standalone() );
+			}
 		else if( getElementContent(c,"type",board_node) == "LECROY_1182")
 			{
 			  //constructing a CAEN_V792 board
@@ -220,9 +226,18 @@ int HwManager::CrateClose(){
       throw config_exception();
 
   int status=0;
-  status |= CAENVME_SystemReset(controllerBoard_.boardHandle_);
-  sleep(1);
-  status |= CAENVME_End(controllerBoard_.boardHandle_);
+  if (hw_[controllerBoard_.boardIndex_]->GetType() == "CAEN_VX718")
+  {
+      status |= CAENVME_SystemReset(controllerBoard_.boardHandle_);
+      sleep(1);
+      status |= CAENVME_End(controllerBoard_.boardHandle_);
+  }
+  else if (hw_[controllerBoard_.boardIndex_]->GetType() == "CAEN_V1742Standalone")
+  {
+      status |= CAEN_DGTZ_Reset(controllerBoard_.boardHandle_);
+      sleep(1);
+      status |= CAEN_DGTZ_CloseDigitizer(controllerBoard_.boardHandle_);
+  }
   
   if (status)
     {
@@ -255,6 +270,13 @@ int HwManager::CrateInit()
 
   for(unsigned int i=0;i<hw_.size();i++)
     {
+        if ( hw_[i]->GetType() == "CAEN_V1742Standalone" )
+	{
+            controllerBoard_.boardIndex_=i;
+            ioControlBoard_.boardIndex_=i;
+            break; 
+	}
+
       if ( hw_[i]->GetType() == "CAEN_VX718" )
 	{
 	  controllerBoard_.boardIndex_=i;
@@ -283,20 +305,43 @@ int HwManager::CrateInit()
   
   if (digiBoard_.boardIndex_<0)
     {
-      CAEN_VX718::CAEN_VX718_Config_t* controllerConfig=((CAEN_VX718*)hw_[controllerBoard_.boardIndex_])->GetConfiguration();
+        if (hw_[controllerBoard_.boardIndex_]->GetType() == "CAEN_VX718")
+        {
+            CAEN_VX718::CAEN_VX718_Config_t* controllerConfig=((CAEN_VX718*)hw_[controllerBoard_.boardIndex_])->GetConfiguration();
+            
+            status |= CAENVME_Init(controllerConfig->boardType, controllerConfig->LinkType, controllerConfig->LinkNum, &controllerBoard_.boardHandle_);
+            
+            if (status)
+            {
+                ostringstream s;
+                s << "[HwManager]::[ERROR]::VME Crate Type "<<controllerConfig->boardType<<" LinkType "<<controllerConfig->LinkType<<" DeviceNumber "<<controllerConfig->LinkNum << " cannot be initialized"  ;
+                Log(s.str(),1);
+                throw config_exception();
+            }
+            ostringstream s;
+            s << "[HwManager]::[INFO]::VME Crate Type "<<controllerConfig->boardType<<" LinkType "<<controllerConfig->LinkType<<" DeviceNumber "<<controllerConfig->LinkNum << " initialized"  ;
+            Log(s.str(),1);
+        }
+        else if (hw_[controllerBoard_.boardIndex_]->GetType() == "CAEN_V1742Standalone")
+        {
+            CAEN_V1742Standalone::CAEN_V1742_Config_t* digiConfig=((CAEN_V1742Standalone*)hw_[controllerBoard_.boardIndex_])->GetConfiguration();
+            
+            ostringstream s; 
+            s << "[HwManager]::[INFO]::Opening Digitizer Desktop Form Factor";
+            Log(s.str(),1);
 
-      status |= CAENVME_Init(controllerConfig->boardType, controllerConfig->LinkType, controllerConfig->LinkNum, &controllerBoard_.boardHandle_);
-
-      if (status)
-	{
-	  ostringstream s;
-	  s << "[HwManager]::[ERROR]::VME Crate Type "<<controllerConfig->boardType<<" LinkType "<<controllerConfig->LinkType<<" DeviceNumber "<<controllerConfig->LinkNum << " cannot be initialized"  ;
-	  Log(s.str(),1);
-	  throw config_exception();
-	}
-      ostringstream s;
-      s << "[HwManager]::[INFO]::VME Crate Type "<<controllerConfig->boardType<<" LinkType "<<controllerConfig->LinkType<<" DeviceNumber "<<controllerConfig->LinkNum << " initialized"  ;
-      Log(s.str(),1);
+            //Hardcoded USB for the moment
+            status |= CAEN_DGTZ_OpenDigitizer(CAEN_DGTZ_USB, 0, 0, 0, &controllerBoard_.boardHandle_);
+            
+            if (status)
+            {
+                ostringstream s1; s1 << "[HwManager]::[ERROR]::Cannot open Digitizer Desktop Form Factor"  ;
+                Log(s1.str(),1);
+                throw config_exception();
+            }
+            ostringstream s1; s1 << "[HwManager]::[INFO]::Opened Digitizer Desktop Form Factor"  ;
+            Log(s1.str(),1);
+        }
     }
   else
     {
@@ -341,7 +386,9 @@ int HwManager::CrateInit()
       throw config_exception();
     }
 
-  status |= CAENVME_SystemReset(controllerBoard_.boardHandle_);
+  if (hw_[controllerBoard_.boardIndex_]->GetType() != "CAEN_V1742Standalone")
+      status |= CAENVME_SystemReset(controllerBoard_.boardHandle_);
+  
   if (status)
     {
       Log("[HwManager]::[ERROR]::VME Crate RESET ERROR",1);
@@ -359,7 +406,14 @@ void HwManager::Clear(){
 	// --- reset to un-initialized/ un-config state	
 	if( hw_.empty() ) return;
 	int status=0;
-  	status |= CAENVME_SystemReset(controllerBoard_.boardHandle_);
+        if (hw_[controllerBoard_.boardIndex_]->GetType() == "CAEN_VX718")
+        {
+            status |= CAENVME_SystemReset(controllerBoard_.boardHandle_);
+        }
+        else if (hw_[controllerBoard_.boardIndex_]->GetType() == "CAEN_V1742Standalone")
+        {
+            status |= CAEN_DGTZ_Reset(controllerBoard_.boardHandle_);
+        }
 	if (status) 
 		{
 		Log("[HwManager]::[Clear]::[ERROR] EXITING 1",1);
@@ -563,7 +617,7 @@ void HwManager::ClearSignalStatus()
 	    throw hw_exception();
 	  }
 
-	int status=dynamic_cast<IOControlBoard*>(hw_[ioControlBoard_.boardIndex_])->BufferClear();
+	int status=dynamic_cast<Board*>(hw_[ioControlBoard_.boardIndex_])->BufferClear();
 	if ( status )
 	  {
 	    ostringstream s;

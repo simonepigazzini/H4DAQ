@@ -817,11 +817,11 @@ RunControlFSM::RunControlFSM(): Daemon() {
 }
 
 bool RunControlFSM::IsOk(){
-	if ( !hwManager_->HaveControlBoard() ){
-		Log("[RunControlFSM]::[IsOk] does not have a control board",1);
-		return false;
-		}
-	return true;
+    if ( !hwManager_->HaveControlBoard() ){
+        Log("[RunControlFSM]::[IsOk] does not have a control board",1);
+        return false;
+    }
+    return true;
 }
 
 void RunControlFSM::Loop(){
