@@ -173,11 +173,12 @@ void HwManager::Config(Configurator &c){
 // --- Init
 void HwManager::Init(){
   //Crate init
+    Log("[HwManager]::[Init] Number of board in crate from config "+hw_.size(),1);
+    
   if (hw_.size()>0 )
   	CrateInit();
   trigBoard_.boardIndex_=controllerBoard_.boardIndex_;
 
-  Log("[HwManager]::[Init] Trigger Board Type "+hw_[trigBoard_.boardIndex_]->GetType(),1);
   // check that Trigger Board, if present, inheriths from TriggerBoard
   if ( trigBoard_.boardIndex_>=0) 
 	  {

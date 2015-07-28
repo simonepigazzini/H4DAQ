@@ -72,11 +72,19 @@ int Daemon::Init(string configFileName){
 		eventBuilder_		->Config(*configurator_);
 		hwManager_		->Config(*configurator_);
 		connectionManager_	->Config(*configurator_);
+		s.str(""); s<<"[Daemon]::[Init] Configuration OK";
+		Log(s.str(),1);
+
+                
 		// Init Everything
 		eventBuilder_->Init();
+                Log(s.str(),1);
 		hwManager_->Init();
+                Log(s.str(),1);
 		connectionManager_->Init();
 		ConfigLogConnManager(connectionManager_,StatusSck);
+                s.str(""); s<<"[Daemon]::[Init] Init OK";
+		Log(s.str(),1);
 
 		return 0;
 	} catch( std::exception &e) 
