@@ -5,6 +5,8 @@
 #include <sstream>
 #include <bitset>
 
+#define CAEN_V1742_TRIGGER_TIMEOUT 500
+
 int CAEN_V1742Standalone::Read (vector<WORD> &v)
 {
     ostringstream s;
@@ -66,44 +68,54 @@ bool CAEN_V1742Standalone::TriggerReceived()
     
     bufferSize_ = 0 ;
     NumEvents = 0 ;
-    
-    while (1 > NumEvents)
+
+    int ntry=0;
+
+    while (1 > NumEvents && ntry<CAEN_V1742_TRIGGER_TIMEOUT)
     {
-        bufferSize_=0;
-        NumEvents=0;
-        ret = CAEN_DGTZ_ReadData (digitizerHandle_, CAEN_DGTZ_SLAVE_TERMINATED_READOUT_MBLT, buffer_, &bufferSize_) ;
+      ++ntry;
+      bufferSize_=0;
+      NumEvents=0;
+      ret = CAEN_DGTZ_ReadData (digitizerHandle_, CAEN_DGTZ_SLAVE_TERMINATED_READOUT_MBLT, buffer_, &bufferSize_) ;
+      
+      if (ret) {
+	
+	s.str(""); s << "[CAEN_V1742]::[ERROR]::READOUT ERROR!!!";
+	Log(s.str(),1);
         
-        if (ret) {
-            
-            s.str(""); s << "[CAEN_V1742]::[ERROR]::READOUT ERROR!!!";
-            Log(s.str(),1);
-            
-            ErrCode = ERR_READOUT ;
-            return false;
-        }
-        
-        if (bufferSize_ != 0) {
-            ret = CAEN_DGTZ_GetNumEvents (digitizerHandle_, buffer_, bufferSize_, &NumEvents) ;
-            if (ret) {
-                s.str(""); s << "[CAEN_V1742]::[ERROR]::READOUT ERROR!!!";
-                Log(s.str(),1);
-                
-                ErrCode = ERR_READOUT ;
-                return false;
-            }
-            if (NumEvents == 0)
-            {
-                s.str(""); s << "[CAEN_V1742]::[WARNING]::NO EVENTS BUT BUFFERSIZE !=0";
-                Log(s.str(),1);
-            }
-        }
-        usleep(50);
+	ErrCode = ERR_READOUT ;
+	return false;
+      }
+      
+      if (bufferSize_ != 0) {
+	ret = CAEN_DGTZ_GetNumEvents (digitizerHandle_, buffer_, bufferSize_, &NumEvents) ;
+	if (ret) {
+	  s.str(""); s << "[CAEN_V1742]::[ERROR]::READOUT ERROR!!!";
+	  Log(s.str(),1);
+          
+	  ErrCode = ERR_READOUT ;
+	  return false;
+	}
+	if (NumEvents == 0)
+	  {
+	    s.str(""); s << "[CAEN_V1742]::[WARNING]::NO EVENTS BUT BUFFERSIZE !=0";
+	    Log(s.str(),1);
+	  }
+      }
+      usleep(50);
     }
-    
+
+    if (ntry >= CAEN_V1742_TRIGGER_TIMEOUT)
+      {
+        s.str(""); s << "[CAEN_V1742]::[WARNING]::Timeout waiting for trigger";
+        Log(s.str(),1);
+	return false;
+      }
+
     //For the moment empty the buffers one by one
     if (NumEvents != 1)
     {
-        s.str(""); s << "[CAEN_V1742]::[ERROR]::MISMATCHED EVENTS!!!" << NumEvents;
+        s.str(""); s << "[CAEN_V1742]::[WARNING]::MISMATCHED EVENTS!!!" << NumEvents;
         Log(s.str(),1);
 
         ErrCode = ERR_MISMATCH_EVENTS ;
