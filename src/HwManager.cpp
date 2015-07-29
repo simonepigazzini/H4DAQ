@@ -116,12 +116,12 @@ void HwManager::Config(Configurator &c){
 		else if( getElementContent(c,"type",board_node) == "CAEN_V1742")
 			{
 			  //constructing a CAEN_V792 board
-			  hw_.push_back( new CAEN_V1742() );
+			  hw_.push_back( new CAEN_V1742(0) );
 			}
 		else if( getElementContent(c,"type",board_node) == "CAEN_V1742Standalone")
 			{
 			  //constructing a CAEN_V792 board
-			  hw_.push_back( new CAEN_V1742Standalone() );
+			  hw_.push_back( new CAEN_V1742(1) );
 			}
 		else if( getElementContent(c,"type",board_node) == "LECROY_1182")
 			{
