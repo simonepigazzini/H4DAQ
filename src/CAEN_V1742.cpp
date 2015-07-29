@@ -16,6 +16,7 @@
 //#define INTERRUPT_MODE           CAEN_DGTZ_IRQ_MODE_ROAK
 //#define INTERRUPT_TIMEOUT        200  // ms
 
+#define CAEN_V1742_TRIGGER_TIMEOUT 500
 
 using namespace std ;
 
@@ -207,116 +208,166 @@ int CAEN_V1742::Config (BoardConfig * bC)
 
 // ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
 
-
 int CAEN_V1742::Read (vector<WORD> &v)
 {
 
-  CAEN_DGTZ_ErrorCode ret=CAEN_DGTZ_Success ;
-  ERROR_CODES ErrCode= ERR_NONE ;
-  //
-  //int i ;
-  //
+    ostringstream s;
+    CAEN_DGTZ_ErrorCode ret=CAEN_DGTZ_Success ;
+    ERROR_CODES ErrCode= ERR_NONE ;
+    CAEN_DGTZ_EventInfo_t       EventInfo ;
 
-  uint32_t BufferSize, NumEvents;
-  CAEN_DGTZ_EventInfo_t       EventInfo ;
-  ostringstream s;
+    if (!standalone_)
+      {
+	    bool trigger=TriggerReceived();
+	    if (!trigger)
+	      {
+		s.str(""); s << "[CAEN_V1742]::[ERROR]::NO TRIGGER RECEIVED";
+		Log(s.str(),1);
+		
+		ErrCode = ERR_READOUT ;
+		return ErrCode ;
+	      }
+      }
 
-  BufferSize = 0 ;
-  NumEvents = 0 ;
-  int itry=0;
-  int TIMEOUT=10000;
-
-  while (1 > NumEvents && itry<TIMEOUT)
+    if (bufferSize_==0)
     {
-      ++itry;      
-      BufferSize=0;
+        s.str(""); s << "[CAEN_V1742]::[ERROR]::NULL BUFFER SIZE!!!";
+        Log(s.str(),1);
+        
+        ErrCode = ERR_READOUT ;
+        return ErrCode ;
+    }
+    
+    // /* Analyze data */
+    // for (i = 0 ; i < (int)NumEvents ; i++) {
+    /* Get one event from the readout buffer */
+    ret = CAEN_DGTZ_GetEventInfo (digitizerHandle_, buffer_, bufferSize_, 0, &EventInfo, &eventPtr_) ;
+    if (ret) {
+        s.str(""); s << "[CAEN_V1742]::[ERROR]::EVENT BUILD ERROR!!!";
+        Log(s.str(),1);
+        
+        ErrCode = ERR_EVENT_BUILD ;
+        return ErrCode ;
+    }
+    ret = CAEN_DGTZ_DecodeEvent (digitizerHandle_, eventPtr_, (void**)&event_) ;
+    if (ret) {
+        s.str(""); s << "[CAEN_V1742]::[ERROR]::EVENT BUILD ERROR!!!";
+        Log(s.str(),1);
+        
+        ErrCode = ERR_EVENT_BUILD ;
+        return ErrCode ;
+    }    
+    // if (digitizerConfiguration_.useCorrections != -1) { // if manual corrections
+    //     ApplyDataCorrection ( 0, digitizerConfiguration_.useCorrections, digitizerConfiguration_.DRS4Frequency, & (event_->DataGroup[0]), &Table_gr0) ;
+    //     ApplyDataCorrection ( 1, digitizerConfiguration_.useCorrections, digitizerConfiguration_.DRS4Frequency, & (event_->DataGroup[1]), &Table_gr1) ;
+    //       }
+    ret = (CAEN_DGTZ_ErrorCode) writeEventToOutputBuffer (v,&EventInfo,event_) ;
+    if (ret) {
+        s.str(""); s << "[CAEN_V1742]::[ERROR]::EVENT BUILD ERROR!!!";
+        Log(s.str(),1);
+        
+        ErrCode = ERR_EVENT_BUILD ;
+        return ErrCode ;
+    }    
+    // } //close cycle over events    
+    return 0 ;
+} ;
+
+bool CAEN_V1742::TriggerReceived()
+{
+    CAEN_DGTZ_ErrorCode ret=CAEN_DGTZ_Success ;
+    ERROR_CODES ErrCode= ERR_NONE ;
+    
+    uint32_t NumEvents;
+    ostringstream s;
+    
+    bufferSize_ = 0 ;
+    NumEvents = 0 ;
+
+    int ntry=0;
+
+    while (1 > NumEvents && ntry<CAEN_V1742_TRIGGER_TIMEOUT)
+    {
+      ++ntry;
+      bufferSize_=0;
       NumEvents=0;
-      ret = CAEN_DGTZ_ReadData (digitizerHandle_, CAEN_DGTZ_SLAVE_TERMINATED_READOUT_MBLT, buffer_, &BufferSize) ;
+      ret = CAEN_DGTZ_ReadData (digitizerHandle_, CAEN_DGTZ_SLAVE_TERMINATED_READOUT_MBLT, buffer_, &bufferSize_) ;
       
       if (ret) {
 	
 	s.str(""); s << "[CAEN_V1742]::[ERROR]::READOUT ERROR!!!";
 	Log(s.str(),1);
-	
+        
 	ErrCode = ERR_READOUT ;
-	return ErrCode ;
+	return false;
       }
-
-      if (BufferSize != 0) {
-	ret = CAEN_DGTZ_GetNumEvents (digitizerHandle_, buffer_, BufferSize, &NumEvents) ;
+      
+      if (bufferSize_ != 0) {
+	ret = CAEN_DGTZ_GetNumEvents (digitizerHandle_, buffer_, bufferSize_, &NumEvents) ;
 	if (ret) {
 	  s.str(""); s << "[CAEN_V1742]::[ERROR]::READOUT ERROR!!!";
 	  Log(s.str(),1);
-
+          
 	  ErrCode = ERR_READOUT ;
-	  return ErrCode ;
+	  return false;
 	}
 	if (NumEvents == 0)
 	  {
-	  s.str(""); s << "[CAEN_V1742]::[WARNING]::NO EVENTS BUT BUFFERSIZE !=0";
-	  Log(s.str(),1);
+	    s.str(""); s << "[CAEN_V1742]::[WARNING]::NO EVENTS BUT BUFFERSIZE !=0";
+	    Log(s.str(),1);
 	  }
       }
       usleep(50);
     }
 
-  if (itry == TIMEOUT)
+    if (ntry >= CAEN_V1742_TRIGGER_TIMEOUT)
+      {
+        s.str(""); s << "[CAEN_V1742]::[WARNING]::Timeout waiting for trigger";
+        Log(s.str(),1);
+	return false;
+      }
+
+    //For the moment empty the buffers one by one
+    if (NumEvents != 1)
     {
-      s.str(""); s << "[CAEN_V1742]::[ERROR]::READ TIMEOUT!!!";
-      Log(s.str(),1);
+        s.str(""); s << "[CAEN_V1742]::[WARNING]::MISMATCHED EVENTS!!!" << NumEvents;
+        Log(s.str(),1);
 
-      int status=BufferClear();
-      ErrCode = ERR_READOUT_TIMEOUT;
-      return ErrCode;
-     }
-
-  //For the moment empty the buffers one by one
-  if (NumEvents != 1)
-    {
-      s.str(""); s << "[CAEN_V1742]::[ERROR]::MISMATCHED EVENTS!!!" << NumEvents;
-      Log(s.str(),1);
-
-      ErrCode = ERR_MISMATCH_EVENTS ;
-      // return ErrCode ;
+        ErrCode = ERR_MISMATCH_EVENTS ;
+        // return ErrCode ;
     }
-
   
-  // /* Analyze data */
-  // for (i = 0 ; i < (int)NumEvents ; i++) {
-    /* Get one event from the readout buffer */
-  ret = CAEN_DGTZ_GetEventInfo (digitizerHandle_, buffer_, BufferSize, 0, &EventInfo, &eventPtr_) ;
-  if (ret) {
-    s.str(""); s << "[CAEN_V1742]::[ERROR]::EVENT BUILD ERROR!!!";
-    Log(s.str(),1);
+    return true;
+}
 
-    ErrCode = ERR_EVENT_BUILD ;
-    return ErrCode ;
-  }
-  ret = CAEN_DGTZ_DecodeEvent (digitizerHandle_, eventPtr_, (void**)&event_) ;
-  if (ret) {
-    s.str(""); s << "[CAEN_V1742]::[ERROR]::EVENT BUILD ERROR!!!";
-    Log(s.str(),1);
 
-    ErrCode = ERR_EVENT_BUILD ;
-    return ErrCode ;
-  }    
-  // if (digitizerConfiguration_.useCorrections != -1) { // if manual corrections
-  //     ApplyDataCorrection ( 0, digitizerConfiguration_.useCorrections, digitizerConfiguration_.DRS4Frequency, & (event_->DataGroup[0]), &Table_gr0) ;
-  //     ApplyDataCorrection ( 1, digitizerConfiguration_.useCorrections, digitizerConfiguration_.DRS4Frequency, & (event_->DataGroup[1]), &Table_gr1) ;
-  //       }
-  ret = (CAEN_DGTZ_ErrorCode) writeEventToOutputBuffer (v,&EventInfo,event_) ;
-  if (ret) {
-    s.str(""); s << "[CAEN_V1742]::[ERROR]::EVENT BUILD ERROR!!!";
-    Log(s.str(),1);
+int CAEN_V1742::SetBusyOn()
+{
+  return 0;
+}
 
-    ErrCode = ERR_EVENT_BUILD ;
-    return ErrCode ;
-  }    
-  // } //close cycle over events    
-  return 0 ;
+int CAEN_V1742::SetBusyOff()
+{
+  return 0;
+}
 
-} ;
+int CAEN_V1742::TriggerAck()
+{
+  return 0;
+}
 
+int CAEN_V1742::SetTriggerStatus(TRG_t triggerType, TRG_STATUS_t triggerStatus)
+{
+  if (!standalone_)
+    return 0;
+
+  int status=0;
+  if (triggerStatus == TRIG_ON)
+    status |= CAEN_DGTZ_SWStartAcquisition(digitizerHandle_);
+  else if (triggerStatus == TRIG_OFF)
+    status |= CAEN_DGTZ_SWStopAcquisition(digitizerHandle_);
+  return status;
+}
 
 // ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----
 

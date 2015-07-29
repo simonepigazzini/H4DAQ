@@ -3,7 +3,6 @@
 //Boards
 #include "interface/CAEN_VX718.hpp"
 #include "interface/CAEN_V1742.hpp"
-#include "interface/CAEN_V1742Standalone.hpp"
 #include "interface/CAEN_V1495PU.hpp"
 #include "interface/CAEN_V1290.hpp"
 #include "interface/CAEN_V814.hpp"
@@ -116,12 +115,12 @@ void HwManager::Config(Configurator &c){
 		else if( getElementContent(c,"type",board_node) == "CAEN_V1742")
 			{
 			  //constructing a CAEN_V792 board
-			  hw_.push_back( new CAEN_V1742(0) );
+			  hw_.push_back( new CAEN_V1742(false) );
 			}
 		else if( getElementContent(c,"type",board_node) == "CAEN_V1742Standalone")
 			{
 			  //constructing a CAEN_V792 board
-			  hw_.push_back( new CAEN_V1742(1) );
+			  hw_.push_back( new CAEN_V1742(true) );
 			}
 		else if( getElementContent(c,"type",board_node) == "LECROY_1182")
 			{
@@ -326,7 +325,7 @@ int HwManager::CrateInit()
         }
         else if (hw_[controllerBoard_.boardIndex_]->GetType() == "CAEN_V1742Standalone")
         {
-            CAEN_V1742Standalone::CAEN_V1742_Config_t* digiConfig=((CAEN_V1742Standalone*)hw_[controllerBoard_.boardIndex_])->GetConfiguration();
+            CAEN_V1742::CAEN_V1742_Config_t* digiConfig=((CAEN_V1742*)hw_[controllerBoard_.boardIndex_])->GetConfiguration();
             
             ostringstream s; 
             s << "[HwManager]::[INFO]::Opening Digitizer Desktop Form Factor";

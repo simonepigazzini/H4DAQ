@@ -15,7 +15,8 @@
 #define CAEN_V1742_INTERRUPT_MODE           CAEN_DGTZ_IRQ_MODE_ROAK
 #define CAEN_V1742_INTERRUPT_TIMEOUT        200  // ms
 
-class CAEN_V1742: public Board {
+class CAEN_V1742: public Board, public TriggerBoard, public IOControlBoard 
+{
 
 public:
 
@@ -90,8 +91,8 @@ public:
     
   } CAEN_V1742_Config_t ;
 
-  CAEN_V1742 ():Board () , digitizerHandle_ (-1) { buffer_= NULL; eventPtr_=NULL, event_=NULL; type_="CAEN_V1742" ; } ;
-
+  CAEN_V1742(bool standalone=false): Board () , digitizerHandle_ (-1) { buffer_= NULL; eventPtr_=NULL, event_=NULL; if (!standalone) type_="CAEN_V1742" ; else type_="CAEN_V1742Standalone"; standalone_=standalone; } ;
+  
   virtual int Init () ;
   virtual int Clear () ;
   virtual int BufferClear () ;
@@ -104,6 +105,14 @@ public:
   inline CAEN_V1742_Config_t* GetConfiguration () { return &digitizerConfiguration_ ; } ;
   int Print () {Print (0) ; } ;
   int Print (int full = 0) ;
+
+    //Main functions to handle the event trigger
+    virtual int SetBusyOn();
+    virtual int SetBusyOff();
+    virtual bool TriggerReceived();
+    virtual int TriggerAck();
+    virtual inline bool  SignalReceived(CMD_t signal) { return true; };
+    virtual int SetTriggerStatus(TRG_t triggerType, TRG_STATUS_t triggerStatus);
 
 protected:
 
@@ -120,16 +129,19 @@ protected:
   int ParseConfiguration     (BoardConfig * bC) ;
   int ParseConfigForGroups   (BoardConfig * bC, const xmlNode * node) ;
   int ParseConfigForTriggers (BoardConfig * bC, const xmlNode * node) ;
-					
+
+  bool standalone_;
+
   uint32_t              digitizerHandle_ ;
   CAEN_V1742_Config_t   digitizerConfiguration_ ;
   CAEN_DGTZ_BoardInfo_t boardInfo_ ;  
 
   //Memory buffers for DR
   char *buffer_;
+  uint32_t bufferSize_;
   char *eventPtr_;
   CAEN_DGTZ_X742_EVENT_t * event_;  
-
+  
 } ;
 
 #endif
