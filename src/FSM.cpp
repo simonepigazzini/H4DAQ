@@ -858,9 +858,12 @@ while (true) {
 	    }
 	  Log("[RunControlFSM]::[Loop]::DEBUG Busy done",1);
 #endif 
-			    MoveToStatus(INITIALIZED);
-			    break;
-		    } 
+	  for (int itrig=int(BEAM_TRIG);itrig<int(LAST_TRIG);++itrig)
+	    hwManager_->SetTriggerStatus(TRG_t(itrig),TRIG_OFF );
+	  
+	  MoveToStatus(INITIALIZED);
+	  break;
+	} 
 	case INITIALIZED:
 		    {
 		      usleep(500);
