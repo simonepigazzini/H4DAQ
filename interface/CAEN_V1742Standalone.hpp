@@ -7,10 +7,10 @@
 #include "interface/CAEN_V1742.hpp"
 
 
-class CAEN_V1742Standalone: public CAEN_V1742, TriggerBoard, IOControlBoard
+class CAEN_V1742Standalone: public CAEN_V1742, public TriggerBoard, public IOControlBoard 
 {
 public:
-    CAEN_V1742Standalone(): CAEN_V1742() , TriggerBoard(), IOControlBoard() { type_="CAEN_V1742Standalone" ; } 
+    CAEN_V1742Standalone(): CAEN_V1742(), TriggerBoard(), IOControlBoard()  { type_="CAEN_V1742Standalone" ; } 
     
     virtual int Read (vector<WORD> &v) ;
     
@@ -23,7 +23,7 @@ public:
     virtual int SetTriggerStatus(TRG_t triggerType, TRG_STATUS_t triggerStatus);
 
 private:
-    int bufferSize_;
+    uint32_t bufferSize_;
 };
 
 #endif

@@ -173,6 +173,8 @@ void HwManager::Config(Configurator &c){
 // --- Init
 void HwManager::Init(){
   //Crate init
+    Log("[HwManager]::[Init] Number of board in crate from config "+hw_.size(),1);
+    
   if (hw_.size()>0 )
   	CrateInit();
   trigBoard_.boardIndex_=controllerBoard_.boardIndex_;
@@ -632,6 +634,7 @@ BoardTypes_t HwManager::GetBoardTypeId(string type){
 	if (type=="TIME" ) return _TIME_;
 	else if( type=="CAEN_VX718") return _CAENVX718_;
 	else if( type=="CAEN_V1742") return _CAENV1742_;
+        else if( type=="CAEN_V1742Standalone") return _CAENV1742_;
 	else if( type=="CAEN_V513") return _CAENV513_;
 	else if( type=="CAEN_V262") return _CAENV262_;
 	else if( type=="CAEN_V792") return _CAENV792_;

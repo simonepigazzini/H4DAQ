@@ -63,7 +63,7 @@ bool CAEN_V1742Standalone::TriggerReceived()
     CAEN_DGTZ_ErrorCode ret=CAEN_DGTZ_Success ;
     ERROR_CODES ErrCode= ERR_NONE ;
     
-    uint32_t bufferSize_, NumEvents;
+    uint32_t NumEvents;
     ostringstream s;
     
     bufferSize_ = 0 ;

@@ -80,7 +80,9 @@ printf("[EventBuilderDaemon]::Init Logfile => %s\n",logFileName.c_str());
 l.SetFileName(logFileName);
 try
   {
-    l.Init();
+      printf("Init\n");
+      l.Init();
+      printf("InitDone\n");
   }
  catch (logfile_open_exception &l)
    {
@@ -89,17 +91,13 @@ try
    }
 //
 //Daemon *d=new Daemon();
-//printf("Construct\n");
 EventBuilderFSM *d=new EventBuilderFSM();
-//printf("LogInit\n");
 d->LogInit(&l);
-//printf("Init\n");
 printf("[EventBuilderDaemon]::Init Configfile => %s\n",configFileName.c_str());
 try{
 	d->Init(configFileName);
 } catch ( std::exception &e ) { printf("%s\n",e.what()); exit(1); }
 try{
-  //	printf("Loop\n");
 	d->Loop();
    }
    catch (sigint_exception &e) { printf("%s\n",e.what());}
