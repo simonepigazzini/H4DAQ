@@ -1424,13 +1424,14 @@ int RunControlFSM::ParseGUIMex(){
 		    	 }
 		    else if( gui_restartrun ) 
 		   	{
-				dataType myMex;
 				gui_pauserun=false;
-				myMex.append((void*)"SPILLCOMPL\0",11);
-				connectionManager_->Send(myMex,CmdSck);
-			    	//SEND beginSPILL
-				gui_pauserun=false;
-				if(myStatus_==SENTBUFFER)MoveToStatus(BEGINSPILL);
+				if(myStatus_==SENTBUFFER)
+                                {
+                                    dataType myMex;
+                                    myMex.append((void*)"SPILLCOMPL\0",11);
+                                    connectionManager_->Send(myMex,CmdSck);
+                                    MoveToStatus(BEGINSPILL);
+                                }                                    
 				//in other cases, stay where you are
 				return 1;
 			}
