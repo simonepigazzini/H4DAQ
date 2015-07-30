@@ -1425,6 +1425,10 @@ int RunControlFSM::ParseGUIMex(){
 		    else if( gui_restartrun ) 
 		   	{
 				gui_pauserun=false;
+                                myPausedFlag_=false;
+                                for (int itrig=int(BEAM_TRIG);itrig<int(LAST_TRIG);++itrig)
+                                    hwManager_->SetTriggerStatus(TRG_t(itrig),TRIG_ON );
+
 				if(myStatus_==SENTBUFFER)
                                 {
                                     dataType myMex;
@@ -1448,7 +1452,13 @@ int RunControlFSM::ParseGUIMex(){
 		    else if (gui_pauserun)
 		        {
 				//gui_pauserun=false;
-				if (! myPausedFlag_)SendStatus(myStatus_,myStatus_); // just for sending the paused information to the GUI --
+				if (! myPausedFlag_)
+                                {
+                                    for (int itrig=int(BEAM_TRIG);itrig<int(LAST_TRIG);++itrig)
+                                        hwManager_->SetTriggerStatus(TRG_t(itrig),TRIG_OFF );
+
+                                    SendStatus(myStatus_,myStatus_); // just for sending the paused information to the GUI --
+                                }
 			        myPausedFlag_=true;
 			        return 1;
 		        }
