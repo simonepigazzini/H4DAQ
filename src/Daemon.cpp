@@ -332,7 +332,8 @@ void Daemon::PublishStatusWithTimeInterval(){
   timeval tv;
   gettimeofday(&tv,NULL);
   long timediff = Utility::timevaldiff(&lastSentStatusMessageTime_,&tv); // in usec
-  if (timediff>200000) SendStatus(myStatus_,myStatus_);
+  if (timediff>200000)
+      SendStatus(myStatus_,myStatus_);
 }
 
 bool Daemon::IsOk(){return true;}

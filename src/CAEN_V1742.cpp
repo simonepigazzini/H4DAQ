@@ -322,8 +322,8 @@ bool CAEN_V1742::TriggerReceived()
 
     if (ntry >= CAEN_V1742_TRIGGER_TIMEOUT)
       {
-        s.str(""); s << "[CAEN_V1742]::[WARNING]::Timeout waiting for trigger";
-        Log(s.str(),1);
+        // s.str(""); s << "[CAEN_V1742]::[WARNING]::Timeout waiting for trigger";
+        // Log(s.str(),1);
 	return false;
       }
 

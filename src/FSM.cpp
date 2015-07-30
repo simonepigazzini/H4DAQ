@@ -547,7 +547,7 @@ while (true) {
 		    }
 	case RECVBUFFER:
 		    { // wait for ALL the BUFFERS
-                        usleep(5000);
+                    usleep(5000);
 		    dataType myMex;
 		    if (connectionManager_->Recv(myMex) ==0 )    
 		    {                                                                     
@@ -823,6 +823,7 @@ bool RunControlFSM::IsOk(){
     }
     return true;
 }
+
 
 void RunControlFSM::Loop(){
 // not constructed in the constructor -- should take this from the configuration
@@ -1201,31 +1202,21 @@ while (true) {
 		    {
 			// something went in error ? -> check
 		    //if (connectionManager_->Recv(myMex) ==0 ){Command myCmd=ParseData(myMex);};
-		    UpdateMex();
-
+			// gui Cmd
+                    if( spillSignalsDisabled_ && !gui_pauserun ) ResetMex();
+                    UpdateMex();
+		    if ( spillSignalsDisabled_ )
+                        if (ParseGUIMex()>0 ) break; 
+                    
 		    // check end of spill conditions
 		    if (!spillSignalsDisabled_ && trgType_== BEAM_TRIG ) 
 		   	{
 			if (hwManager_->SignalReceived(EE) )
 			  {
 			    // check for END OF SPILL
-			    dataType eeMex;
-			    eeMex.append((void*)"EE\0",3);
-			    dataType guieeMex;
-			    guieeMex.append((void*)"GUI_SPS ee",10);
-			    for (int itrig=int(BEAM_TRIG);itrig<int(LAST_TRIG);++itrig)
-			      hwManager_->SetTriggerStatus(TRG_t(itrig),TRIG_OFF );
-			    //				  usleep(10000);
-			    connectionManager_->Send(eeMex,CmdSck);
-			    connectionManager_->Send(guieeMex,StatusSck);
-			    hwManager_->ClearSignalStatus();
-			    // hwManager_->SetBusyOff();
-			    // hwManager_->ClearBusy();
-			    // hwManager_->TriggerAck();
-			    gettimeofday(&spillduration_stopwatch_stop_time,NULL);
-			    SendSpillDuration();
-			    MoveToStatus(ENDSPILL);
-			    break;
+                              SendEE();
+                              MoveToStatus(ENDSPILL);
+                              break;
 			  }
 		    	}
 		    else 
@@ -1233,23 +1224,9 @@ while (true) {
 		    	{
 				if (trgRead_ >= trgNevents_)
 				{
-				  // check for END OF SPILL
-				  dataType eeMex;
-				  eeMex.append((void*)"EE\0",3);
-				  dataType guieeMex;
-				  guieeMex.append((void*)"GUI_SPS ee",10);
-				  for (int itrig=int(BEAM_TRIG);itrig<int(LAST_TRIG);++itrig)
-				    hwManager_->SetTriggerStatus(TRG_t(itrig),TRIG_OFF );
-				  //usleep(10000);
-				  connectionManager_->Send(eeMex,CmdSck);
-				  // hwManager_->ClearSignalStatus();
-				  // hwManager_->SetBusyOff();
-				  // hwManager_->ClearBusy();
-			          // hwManager_->TriggerAck();
-				  gettimeofday(&spillduration_stopwatch_stop_time,NULL);
-				  SendSpillDuration();
-				MoveToStatus(ENDSPILL);
-				break;
+                                    SendEE();
+                                    MoveToStatus(ENDSPILL);
+                                    break;
 				}
 		    	}
 		     /// check trigger
@@ -1434,7 +1411,15 @@ int RunControlFSM::ParseGUIMex(){
 				myMex.append((void*)"ENDRUN\0",7);
 				connectionManager_->Send(myMex,CmdSck);
 				gui_pauserun=false;
-				MoveToStatus(INITIALIZED);
+                                if (myStatus_==WAITTRIG)
+                                {
+                                    SendEE();
+                                    MoveToStatus(ENDSPILL);
+                                }
+                                else
+                                {
+                                    MoveToStatus(INITIALIZED);
+                                }
 				return 1;
 		    	 }
 		    else if( gui_restartrun ) 
@@ -1476,4 +1461,24 @@ int RunControlFSM::ParseGUIMex(){
 				return 1;
 			    }
 		   return 0;
+}
+
+int RunControlFSM::SendEE()
+{
+    dataType eeMex;
+    eeMex.append((void*)"EE\0",3);
+    dataType guieeMex;
+    guieeMex.append((void*)"GUI_SPS ee",10);
+    for (int itrig=int(BEAM_TRIG);itrig<int(LAST_TRIG);++itrig)
+        hwManager_->SetTriggerStatus(TRG_t(itrig),TRIG_OFF );
+    //				  usleep(10000);
+    connectionManager_->Send(eeMex,CmdSck);
+    connectionManager_->Send(guieeMex,StatusSck);
+    hwManager_->ClearSignalStatus();
+    // hwManager_->SetBusyOff();
+    // hwManager_->ClearBusy();
+    // hwManager_->TriggerAck();
+    gettimeofday(&spillduration_stopwatch_stop_time,NULL);
+    SendSpillDuration();
+    return 0;
 }
